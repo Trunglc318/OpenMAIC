@@ -780,7 +780,7 @@
       "addRole": "Thêm vai"
     },
     "elementRef": {
-      "remove": "移除引用 {{label}}",
+      "remove": "Xóa tham chiếu {{label}}",
       "counts": "Đã tham chiếu {{count}}/{{max}}",
       "exitPicking": "Xong",
       "startPicking": "Tham chiếu phần tử"
@@ -808,7 +808,7 @@
     "elementCount": "{{count}} phần tử"
   },
   "quiz": {
-    "title": "Câu đố",
+    "title": "Bài kiểm tra",
     "subtitle": "Kiểm tra kiến thức của bạn",
     "questionsCount": "câu hỏi",
     "totalPrefix": "",

@@ -1,0 +1,212 @@
+> Bản dịch / biên soạn cho bản tiếng Việt, dựa trên bản tiếng Anh gốc, chưa phải tài liệu chính thức của upstream.
+
+# Triển khai
+
+Trang này hướng dẫn triển khai OpenMAIC bằng Docker và PostgreSQL
+cho người dùng Việt Nam. Nếu bạn chỉ chạy thử ở máy local,
+hãy xem `getting-started.vi.mdx` trước — trang đó đã đủ.
+
+## Tổng quan
+
+Một bản triển khai đầy đủ gồm:
+
+- **App OpenMAIC** — Next.js, chạy trong container Docker
+  (xem `Dockerfile` ở gốc repo)
+- **PostgreSQL 16** — lưu khóa học, tài liệu, tiến độ học
+- **Volume `data/`** — file tải lên và khóa mã hóa instance
+- **Provider AI bên ngoài** — OpenAI / Gemini / Anthropic…
+  qua API key trong `.env.local` / `openmaic.yml`
+
+Bạn cần một máy chủ có Docker và Docker Compose, và một API key
+của ít nhất một provider. Xem cấu hình model trong
+`configuration.vi.mdx` trước khi triển khai.
+
+## Chuẩn bị
+
+1. Clone repo và sao chép file cấu hình:
+
+```bash
+git clone https://github.com/Trunglc318/OpenMAIC.git
+cd OpenMAIC
+cp .env.example .env.local
+cp openmaic.example.yml openmaic.yml
+```
+
+2. Đặt ít nhất một key trong `.env.local`, ví dụ:
+
+```bash
+OPENAI_API_KEY=<redacted>
+```
+
+3. Đặt `OPENMAIC_SECRET_KEY` trong `.env.local` (xem mục dưới).
+   Nếu bỏ trống, máy chủ sẽ tự tạo key trong `data/instance-secret.key`
+   ở lần chạy đầu tiên — nhưng key đó sẽ mất nếu volume `data/`
+   bị xóa.
+
+Tạo key bằng lệnh:
+
+```bash
+openssl rand -base64 32
+```
+
+4. Đặt múi giờ Việt Nam. OpenMAIC không đặt cứng múi giờ
+   `Asia/Ho_Chi_Minh` trong code, nên bạn cần đặt rõ trong
+   môi trường triển khai:
+
+```bash
+TZ=Asia/Ho_Chi_Minh
+```
+
+Đặt biến `TZ` trong `.env.local` và trong `docker-compose.yml`
+cho cả service app và service database, để log, thời gian tạo
+khóa học và lịch sử đều theo giờ Việt Nam (UTC+7).
+Kiểm tra lại sau khi chạy: tạo một khóa học thử và xem thời gian
+hiển thị có đúng giờ Việt Nam không.
+
+## Triển khai bằng Docker Compose
+
+Repo có sẵn `docker-compose.yml` và `docker-compose.db.yml`.
+File `docker-compose.yml` tự đặt `DATABASE_URL` cho PostgreSQL
+đi kèm, nên bạn thường không cần đặt `DATABASE_URL` bằng tay
+khi dùng đúng file compose này.
+
+Chạy:
+
+```bash
+docker compose up -d --build
+```
+
+Xem log:
+
+```bash
+docker compose logs -f
+```
+
+Dừng:
+
+```bash
+docker compose down
+```
+
+**Lưu ý:** `docker compose down` không xóa volume theo mặc định,
+nên dữ liệu PostgreSQL và thư mục `data/` vẫn còn.
+Muốn xóa cả volume, phải thêm cờ `-v` — **đừng chạy lệnh đó
+trên máy production khi chưa backup**.
+
+Để build riêng image production rồi chạy:
+
+```bash
+docker build -t openmaic .
+```
+
+## Biến môi trường quan trọng
+
+| Biến | Dùng để làm gì |
+| --- | --- |
+| `TZ` | Múi giờ, đặt `Asia/Ho_Chi_Minh` cho triển khai ở Việt Nam |
+| `DATABASE_URL` | Chuỗi kết nối PostgreSQL, bắt buộc trừ khi dùng `docker-compose.yml` đi kèm |
+| `OPENMAIC_SECRET_KEY` | Mã hóa key provider người dùng lưu trong app, giữ cùng với database |
+| `OPENAI_API_KEY` (và các key provider khác) | Key gọi model, tham chiếu từ `openmaic.yml` dạng `${VAR}` |
+| `OPENMAIC_CONFIG` | Đường dẫn file `openmaic.yml`, mặc định là `openmaic.yml` ở thư mục chạy máy chủ (`/app` trong image Docker) |
+| `ACCESS_CODE` | Mã truy cập chung cho bản triển khai chia sẻ, xem mục dưới |
+
+Đừng commit `.env.local` và đừng ghi key thật vào `openmaic.yml`.
+Key chỉ nằm trong biến môi trường hoặc Docker / Kubernetes secret.
+
+## `ACCESS_CODE` — triển khai chia sẻ
+
+Nếu bạn triển khai cho nhiều người dùng chung (ví dụ một lớp học,
+một trường), hãy đặt `ACCESS_CODE`:
+
+```bash
+ACCESS_CODE=<mã-bạn-chọn>
+```
+
+Người dùng sẽ cần nhập mã này để vào app. Đây là lớp bảo vệ đơn giản,
+không thay cho đăng nhập tài khoản đầy đủ. Hãy:
+
+- Chọn mã đủ dài, không dùng mã dễ đoán
+- Đổi mã khi có người không còn được phép truy cập
+- Không gửi mã qua kênh công khai
+
+Nếu bạn chạy cho một trường học, hãy cân nhắc thêm `allowUserKeys: false`
+trong `openmaic.yml` (xem `configuration.vi.mdx`), để học sinh
+không tự thêm key và đổi model.
+
+## Backup database
+
+**Backup trước khi nâng cấp, trước khi đổi `OPENMAIC_SECRET_KEY`,
+và định kỳ hàng tuần.** Mất database đồng nghĩa mất toàn bộ
+khóa học, tài liệu và tiến độ học.
+
+### Backup PostgreSQL trong Docker
+
+Tìm tên container database của bạn trước:
+
+```bash
+docker compose ps
+```
+
+Rồi backup bằng `pg_dump` (tên container và tên database lấy
+từ kết quả lệnh trên, đừng chép mù tên trong ví dụ):
+
+```bash
+docker compose exec db pg_dump -U postgres openmaic > backup-openmaic.sql
+```
+
+Trong ví dụ trên, `db` là tên service database trong Compose,
+`postgres` là user và `openmaic` là tên database — hãy thay bằng
+giá trị thực tế trong `docker-compose.yml` / `.env.local` của bạn.
+
+### Backup thư mục `data/`
+
+Ngoài database, hãy backup cả thư mục `data/` (nơi chứa file tải lên
+và `data/instance-secret.key`). Nếu mất file key này mà không có
+`OPENMAIC_SECRET_KEY` đã đặt rõ ràng, các key provider người dùng
+đã lưu sẽ không đọc được nữa.
+
+### Khôi phục
+
+Khôi phục database từ file backup:
+
+```bash
+docker compose exec -T db psql -U postgres openmaic < backup-openmaic.sql
+```
+
+Hãy thử khôi phục trên một máy thử trước khi khôi phục trên
+máy production. Một bản backup chưa từng thử khôi phục thì
+chưa thể coi là backup thật.
+
+## Nâng cấp
+
+1. Backup database và thư mục `data/` (xem mục trên).
+2. Pull code mới và đọc `CHANGELOG.md` — một số bản nâng cấp
+   là nâng cấp một chiều, không quay lại được.
+3. Chạy lại build:
+
+```bash
+docker compose up -d --build
+```
+
+4. Kiểm tra log khởi động và tạo thử một khóa học ngắn.
+
+## Kiểm tra sau khi triển khai
+
+- [ ] App mở được qua tên miền / IP của bạn, đúng giờ Việt Nam
+- [ ] Đăng nhập bằng `ACCESS_CODE` (nếu đã đặt) hoạt động
+- [ ] Tạo được một khóa học ngắn bằng tiếng Việt
+- [ ] Giọng đọc tiếng Việt phát được (nếu đã cấu hình TTS)
+- [ ] Xuất được PPTX / HTML
+- [ ] Backup database và `data/` đã chạy thử khôi phục
+
+## Giới hạn cần biết
+
+- Tài liệu này không ghi giá thuê máy chủ, vì giá thay đổi theo
+  nhà cung cấp hạ tầng bạn chọn.
+- Chi phí model AI tính bằng USD, trả bằng thẻ quốc tế —
+  xem mục chi phí trong `README-vi.md`.
+- OpenMAIC lưu dữ liệu học sinh trên máy chủ của bạn.
+  Nếu dùng trong trường học, hãy có chính sách riêng tư
+  bằng tiếng Việt và xin đồng ý của phụ huynh cho học sinh
+  dưới 16 tuổi, theo Nghị định 13/2023 về bảo vệ dữ liệu cá nhân.
+  Tài liệu này không thay cho tư vấn pháp lý.

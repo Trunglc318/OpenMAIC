@@ -1,0 +1,231 @@
+> Bản dịch / biên soạn cho bản tiếng Việt, dựa trên bản tiếng Anh gốc, chưa phải tài liệu chính thức của upstream.
+
+# Cấu hình
+
+Trang này giải thích hai file cấu hình chính của OpenMAIC:
+
+- `openmaic.yml` — chọn model cho từng việc dùng AI
+- `.env.local` — API key và tùy chọn máy chủ
+
+Cả hai file đều không nên commit lên Git. Sao chép từ file mẫu:
+
+```bash
+cp .env.example .env.local
+cp openmaic.example.yml openmaic.yml
+```
+
+`openmaic.yml` được đọc một lần khi máy chủ khởi động.
+Sửa file này xong, bạn phải khởi động lại máy chủ.
+
+## `openmaic.yml` gồm những gì?
+
+### Providers — tài khoản máy chủ có thể gọi
+
+Mỗi provider là một nhà cung cấp AI mà máy chủ được phép gọi,
+kèm key và danh sách model được phép dùng (`models`).
+
+```yaml
+providers:
+  openai:
+    preset: openai
+    apiKey: ${OPENAI_API_KEY}
+    models: [gpt-5.5]
+```
+
+- `preset` là mẫu cấu hình có sẵn của provider đó, ví dụ
+  `openai`, `anthropic`, `tavily`, `openai-image`.
+- `apiKey` tham chiếu biến môi trường trong `.env.local`,
+  viết dạng `${VAR}`. **Không ghi key thật vào `openmaic.yml`.**
+- `models` là danh sách cho phép (allowlist), không chỉ là danh sách
+  hiển thị. Model không nằm trong danh sách này sẽ không được
+  máy chủ cho phép dùng, kể cả khi người dùng chọn trong app.
+- Một provider không có key và không có `models` thì không có
+  model nào được phép dùng.
+
+Các preset đã biết trong repo gồm: `openai`, `anthropic`,
+`google` (Gemini), `deepseek`, `qwen`, `kimi`, `minimax`, `glm`,
+`doubao`, `openrouter`, `tavily`, `openai-image`, `openai-tts`,
+`minicpm-ocr`, `openai-compatible`. Hãy dùng đúng tên preset
+trong file mẫu, đừng tự bịa tên preset mới.
+
+### Slots — mỗi việc dùng AI thì dùng model nào
+
+Slot là “một việc dùng AI”. Slot không được gán riêng sẽ theo
+slot `llm` mặc định.
+
+```yaml
+slots:
+  llm: openai:gpt-5.5
+```
+
+Cách viết model trong slot là `<provider>:<model>`, ví dụ
+`openai:gpt-5.5`. Chỉ provider id viết một mình cũng được,
+lúc đó dùng model mặc định của provider đó cho việc đó.
+
+Các slot thường gặp:
+
+| Slot | Việc dùng | Ví dụ |
+| --- | --- | --- |
+| `llm` | Chat mặc định, mọi slot chat không gán riêng đều theo slot này | `openai:gpt-5.5` |
+| `course.outline` | Lập dàn ý khóa học | `openai:gpt-5.5` |
+| `webSearch` | Tìm kiếm web | `tavily` |
+| `tts` | Tổng hợp giọng nói | `voxcpm2` |
+| `image` | Tạo hình minh họa | `openai-image:gpt-image-2` |
+| `video` | Tạo video | `minimax` |
+| `document` | Bóc tách tài liệu / OCR | `minicpm-ocr` |
+| `agent` | Agent Workbench, cần model hỗ trợ tool calling | `openai:gpt-5.5` |
+
+Đặt slot thành `null` nghĩa là tắt tính năng đó theo mặc định,
+người dùng vẫn có thể bật lại, trừ khi slot đó bị khóa.
+
+Bạn cũng có thể đặt fallback cho slot LLM:
+
+```yaml
+slots:
+  course.outline:
+    model: openai:gpt-5.5
+    fallback: openai:gpt-5.5
+```
+
+Fallback chỉ thử một lần khi model chính lỗi ở mức có thể thử lại.
+Ví dụ trên dùng cùng một model cho cả chính và fallback chỉ để
+minh họa cú pháp — trong thực tế hãy chọn hai model khác nhau.
+
+### `lock` — khóa slot lại
+
+```yaml
+# lock: [video]
+```
+
+Slot nằm trong `lock` sẽ cố định cho mọi người, người dùng không
+đổi được trong app. `lock: all` khóa toàn bộ slot.
+Mỗi slot trong `lock` phải được viết trong `slots` ở trên
+(`null` cũng tính là đã viết).
+
+### `allowUserKeys` — người dùng có được tự thêm key không
+
+```yaml
+# allowUserKeys: true
+```
+
+- `true` (mặc định): người dùng có thể thêm provider và key
+  của riêng họ trong cài đặt của app.
+- `false`: người dùng chỉ được chọn trong số provider mà bạn
+  đã khai báo trong `openmaic.yml`.
+
+Khi triển khai cho lớp học hoặc cho trường, hãy cân nhắc đặt
+`allowUserKeys: false` và khóa các slot quan trọng lại, để
+học sinh không tự đổi sang model đắt hoặc model ngoài kiểm soát.
+
+## `.env.local` — key và tùy chọn máy chủ
+
+### `OPENMAIC_SECRET_KEY` — khóa mã hóa key người dùng
+
+```bash
+# OPENMAIC_SECRET_KEY=
+```
+
+Key này mã hóa các provider key mà người dùng lưu trong cài đặt
+của web app. Khi chưa đặt, máy chủ sẽ tự tạo một key ở lần khởi
+động đầu tiên trong `data/instance-secret.key` (trong Docker
+là volume `data/`).
+
+Hãy đặt `OPENMAIC_SECRET_KEY` rõ ràng khi:
+
+- Chạy nhiều hơn một instance
+- Thư mục `data/` không tồn tại sau khi khởi động lại
+- Chạy trên hệ file chỉ đọc
+
+Tạo key bằng lệnh:
+
+```bash
+openssl rand -base64 32
+```
+
+**Giữ key này cùng với database.** Key provider đã lưu sẽ không
+đọc được nếu thiếu key này, hoặc nếu key đã đổi.
+
+### Key của từng provider
+
+Trong `.env.example`, mỗi provider có các biến dạng:
+
+```bash
+OPENAI_API_KEY=<redacted>
+OPENAI_BASE_URL=
+OPENAI_MODELS=
+```
+
+- `{PROVIDER}_API_KEY` — key của provider
+- `{PROVIDER}_BASE_URL` — endpoint, chỉ đặt khi cần endpoint riêng
+- `{PROVIDER}_MODELS` — danh sách model được phép, viết cách nhau
+  bằng dấu phẩy, bắt buộc khi dùng cấu hình legacy không có
+  `openmaic.yml`
+
+Khi đã có `openmaic.yml`, các biến provider trong `.env.local`
+không tự cấu hình provider nữa — chúng chỉ được tham chiếu từ
+`openmaic.yml` dạng `${VAR}`.
+
+## Ví dụ `openmaic.yml` cho người Việt
+
+Ví dụ dưới đây chỉ dùng những tên đã biết trong file mẫu gốc:
+`gpt-5.5`, `tavily`, `voxcpm2`. Đừng bịa thêm model ID mới.
+
+```yaml
+providers:
+  openai:
+    preset: openai
+    apiKey: ${OPENAI_API_KEY}
+    models: [gpt-5.5]
+
+  tavily:
+    preset: tavily
+    apiKey: ${TAVILY_API_KEY}
+
+slots:
+  llm: openai:gpt-5.5
+  webSearch: tavily
+  tts: voxcpm2
+  document: minicpm-ocr
+```
+
+Giải thích từng lựa chọn:
+
+- **`llm: openai:gpt-5.5`** — model chat mặc định trong file mẫu gốc.
+  OpenAI dùng được ở Việt Nam, tài liệu tiếng Anh đầy đủ.
+- **`webSearch: tavily`** — tìm kiếm web khuyên dùng cho người Việt,
+  thay cho Baidu / Bocha vốn thiên về nguồn Trung Quốc.
+  Bạn cần đặt `TAVILY_API_KEY` trong `.env.local`.
+- **`tts: voxcpm2`** — VoxCPM2 hỗ trợ tiếng Việt trong 30 ngôn ngữ.
+  Đây là lựa chọn TTS local, cần chạy dịch vụ VoxCPM2 và đặt
+  `TTS_VOXCPM_BASE_URL` trong `.env.local`
+  (mặc định local là `http://localhost:8000/v1`).
+  Nếu chưa chạy được VoxCPM2 local, hãy bỏ slot `tts` này
+  và dùng TTS cloud (OpenAI / Google Gemini / MiniMax) rồi nghe thử
+  giọng tiếng Việt trước.
+- **`document: minicpm-ocr`** — bóc tách tài liệu / OCR.
+  Chưa kiểm chứng đầy đủ với PDF tiếng Việt có dấu, hãy thử
+  với một file SGK tiếng Việt trước khi dùng trong lớp thật.
+
+Muốn rẻ hơn, bạn có thể thêm provider DeepSeek qua OpenRouter
+làm slot `llm` thay cho OpenAI, nhưng hãy kiểm tra lại tên model
+trong danh sách `models` của provider đó trước khi lưu.
+
+## Cấu hình legacy (không có `openmaic.yml`)
+
+Nếu không có file `openmaic.yml`, OpenMAIC vẫn chạy bằng cấu hình cũ:
+biến `server-providers.yml`, `DEFAULT_MODEL` và `MODEL_FALLBACK`.
+Cách này vẫn hoạt động nhưng đã deprecated (không khuyến khích dùng mới).
+Tài liệu này khuyên dùng `openmaic.yml` cho mọi triển khai mới.
+
+Riêng `MODEL_ROUTES` cũ thì **bắt buộc** phải chuyển thành slots
+trong `openmaic.yml`.
+
+## Kiểm tra sau khi sửa cấu hình
+
+1. Lưu `openmaic.yml` và `.env.local`.
+2. Khởi động lại máy chủ (`pnpm dev` hoặc khởi động lại container).
+3. Đọc log khởi động — máy chủ sẽ báo đúng vị trí lỗi nếu file
+   YAML sai, provider chưa khai báo, hoặc biến `${VAR}` chưa đặt.
+4. Vào app, mở cài đặt model, kiểm tra slot `llm`, `webSearch`
+   và `tts` đã nhận đúng model chưa.
+5. Tạo thử một khóa học ngắn bằng tiếng Việt để kiểm tra đầu cuối.

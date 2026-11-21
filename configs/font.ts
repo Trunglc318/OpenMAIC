@@ -4,19 +4,31 @@
  * A slide stores the picked family name, so every entry must be declared
  * wherever slides render, not only in the editor. `app/slide-fonts.ts`,
  * imported on every page by the root layout, declares them all:
- *  - Chinese: `@openmaic/renderer/picker-fonts.css`, which declares these names
- *    over the renderer's self-hosted faces (`FONT_ALIASES` in its
- *    `fonts.config.mjs`).
- *  - Latin: `@fontsource` packages; `Inter` is declared by
- *    `app/inter-alias.css` over the UI's `Inter Variable` files.
+ *
+ * - Chinese: `@openmaic/renderer/picker-fonts.css`, which declares these names
+ * over the renderer's self-hosted faces (`FONT_ALIASES` in its
+ * `fonts.config.mjs`).
+ *
+ * - Latin: `@fontsource` packages; `Inter` is declared by
+ * `app/inter-alias.css` over the UI's `Inter Variable` files.
+ *
+ * - Vietnamese: `Be Vietnam Pro` is added for Vietnamese slides. Install
+ * `@fontsource/be-vietnam-pro` and import its 400/700 CSS in
+ * `app/slide-fonts.ts` (see that file). Do NOT use a Chinese font
+ * (Noto Sans SC / LXGW WenKai / ZCOOL KuaiLe) for a Vietnamese slide:
+ * those faces do not cover Vietnamese diacritics and will fall back
+ * inconsistently. Inter / Roboto also cover Vietnamese, but
+ * Be Vietnam Pro is the recommended default for Vietnamese slides.
  *
  * Adding a Latin font: install its `@fontsource` package, import the weight
  * CSS in `app/slide-fonts.ts`, then add an entry here whose `value` matches the
  * package's `@font-face` family name. A Chinese font needs a self-hosted face
  * and an alias in the renderer's `fonts.config.mjs`.
+ *
  * `tests/edit/latin-picker-fonts.test.ts` and
  * `tests/edit/picker-fonts-outside-editor.test.ts` check the declarations.
  */
+
 export interface FontEntry {
   /** Display name; rendered as the fallback when `labelKey` is absent. */
   readonly label: string;
@@ -28,6 +40,8 @@ export interface FontEntry {
 
 export const FONTS: readonly FontEntry[] = [
   { labelKey: 'edit.text.fontDefault', label: 'Default', value: '' },
+  // Vietnamese (recommended for Vietnamese slides)
+  { label: 'Be Vietnam Pro', value: 'Be Vietnam Pro' },
   // Chinese
   { label: '思源黑体', value: 'Noto Sans SC' },
   { label: '思源宋体', value: 'Noto Serif SC' },

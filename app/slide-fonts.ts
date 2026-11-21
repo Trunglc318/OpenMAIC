@@ -7,17 +7,26 @@
  * editor uses these same rules, so a slide renders alike in both.
  *
  * - Chinese: `@openmaic/renderer/picker-fonts.css` declares the names the
- *   picker writes over the renderer's self-hosted faces (whole files).
+ * picker writes over the renderer's self-hosted faces (whole files).
+ *
  * - Latin: `@fontsource` packages. Their 16 stylesheets total about 53 KB, and
- *   each face is `unicode-range`-subset into files of roughly 20–50 KB that
- *   download only when a page actually uses that font.
+ * each face is `unicode-range`-subset into files of roughly 20–50 KB that
+ * download only when a page actually uses that font.
+ *
+ * - Vietnamese: `@fontsource/be-vietnam-pro` (400/700) is added below.
+ * Install it first: `pnpm add @fontsource/be-vietnam-pro`
+ * Be Vietnam Pro covers Vietnamese diacritics; use it for Vietnamese slides
+ * instead of a Chinese font.
+ *
  * - Inter: the root layout loads it as `Inter Variable`; `./inter-alias.css`
- *   declares the `Inter` name the picker writes over the same files.
+ * declares the `Inter` name the picker writes over the same files.
  *
  * The picker list lives in `configs/font.ts`; each entry's `value` must match a
  * family name declared here.
  */
 import '@openmaic/renderer/picker-fonts.css';
+import '@fontsource/be-vietnam-pro/400.css';
+import '@fontsource/be-vietnam-pro/700.css';
 import '@fontsource/roboto/400.css';
 import '@fontsource/roboto/700.css';
 import '@fontsource/open-sans/400.css';

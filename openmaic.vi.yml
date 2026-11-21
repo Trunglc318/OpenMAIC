@@ -1,0 +1,44 @@
+# openmaic.vi.yml — cấu hình mẫu cho bản triển khai ở Việt Nam
+# Copy file này thành openmaic.yml (hoặc trỏ OPENMAIC_CONFIG tới nó),
+# rồi điền key thật vào .env.local. Đừng commit key thật.
+#
+# Đây là file MỚI, không ghi đè openmaic.example.yml gốc.
+# Các model ID dưới đây chỉ dùng những ID đã có trong repo gốc
+# (gpt-5.5, tavily, voxcpm2...). Nếu provider bạn dùng không có model đó,
+# đổi sang model tương đương và chạy lại kiểm tra khởi động.
+
+providers:
+  # Đường chính khuyên dùng cho người Việt: OpenAI (dùng được ở VN).
+  openai:
+    preset: openai
+    apiKey: ${OPENAI_API_KEY}
+    models: [gpt-5.5]
+
+  # Tìm kiếm web cho truy vấn tiếng Việt: Tavily (bỏ comment khi có key).
+  # Đừng dùng Baidu/Bocha làm mặc định cho người Việt — kết quả thiên về nguồn Trung Quốc.
+  # tavily:
+  #   preset: tavily
+  #   apiKey: ${TAVILY_API_KEY}
+
+  # TTS tiếng Việt: VoxCPM2 local hỗ trợ 30 ngôn ngữ, trong đó có tiếng Việt.
+  # Chạy VoxCPM2 ở localhost:8000 trước, rồi bỏ comment khối dưới.
+  # voxcpm2:
+  #   preset: voxcpm2
+  #   baseUrl: http://localhost:8000/v1
+
+  # ASR tiếng Việt (chọn 1 trong 2, ghi rõ trong tài liệu):
+  # - Local: FunASR với checkpoint Fun-ASR-MLT-Nano-2512 (31 ngôn ngữ, có tiếng Việt).
+  #   Checkpoint Nano gốc chỉ zh/en/ja — KHÔNG dùng làm mặc định cho tiếng Việt.
+  # - Cloud: Azure STT / OpenAI Whisper, đều hỗ trợ vi-VN.
+  #   Cấu hình ASR cloud theo .env.example của repo gốc.
+
+slots:
+  llm: openai:gpt-5.5
+  # webSearch: tavily
+  # tts: voxcpm2
+  # video: null
+
+# Người dùng vẫn được tự thêm key/provider của họ trong UI,
+# trừ khi bạn khóa lại. Muốn khóa cho lớp học dùng chung, xem
+# configuration.vi.mdx trong gói này.
+# allowUserKeys: true

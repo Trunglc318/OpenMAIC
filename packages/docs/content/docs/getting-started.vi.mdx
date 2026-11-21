@@ -1,0 +1,174 @@
+> Bản dịch / biên soạn cho bản tiếng Việt, dựa trên bản tiếng Anh gốc, chưa phải tài liệu chính thức của upstream.
+
+# Bắt đầu
+
+Trang này hướng dẫn bạn chạy OpenMAIC lần đầu, từ máy trống tới
+lớp học đầu tiên. Nếu bạn chỉ muốn đọc tổng quan, hãy xem
+`README-vi.md` ở gốc repo trước.
+
+## OpenMAIC là gì?
+
+OpenMAIC biến một chủ đề hoặc một tài liệu thành một lớp học tương tác:
+slide, bài kiểm tra, mô phỏng, trò chơi và hoạt động học theo dự án (PBL).
+Giảng viên AI và bạn học AI giảng bài, thảo luận và đọc lời giảng
+thành tiếng. Bạn có thể sửa từng slide bằng AI, xuất bài học ra
+`.pptx` hoặc một file `.html` ngoại tuyến.
+
+## Yêu cầu
+
+Trước khi bắt đầu, bạn cần có:
+
+- **Node.js** >= 22.19
+- **pnpm** >= 10
+- **PostgreSQL** 16
+- Một API key của ít nhất một nhà cung cấp model
+
+Kiểm tra phiên bản trên máy của bạn:
+
+```bash
+node --version
+pnpm --version
+```
+
+Nếu `node` hoặc `pnpm` chưa có, hãy cài theo hướng dẫn chính thức
+của Node.js và pnpm, rồi quay lại đây.
+
+PostgreSQL dùng để lưu khóa học trên máy chủ. Khi chạy local,
+bạn không cần tự cài PostgreSQL — `pnpm db:up` sẽ khởi động
+một PostgreSQL bằng Docker cho bạn (xem bước 3 dưới đây).
+
+## Bước 1. Clone và cài đặt
+
+```bash
+git clone https://github.com/Trunglc318/OpenMAIC.git
+cd OpenMAIC
+pnpm install
+```
+
+Lệnh `pnpm install` có thể mất vài phút ở lần đầu, vì repo này
+có nhiều package con (workspace).
+
+## Bước 2. Cấu hình
+
+Sao chép hai file mẫu:
+
+```bash
+cp .env.example .env.local
+cp openmaic.example.yml openmaic.yml
+```
+
+- `.env.local` — API key và tùy chọn máy chủ. **Không commit file này.**
+- `openmaic.yml` — chọn model cho từng việc dùng AI.
+  File này được đọc một lần khi máy chủ khởi động, sửa xong
+  phải khởi động lại máy chủ.
+
+File mẫu chỉ cần một key duy nhất trong `.env.local`:
+
+```bash
+OPENAI_API_KEY=<redacted>
+```
+
+Hoặc đổi provider sang một provider bạn đã có key, ví dụ
+Google Gemini hoặc Anthropic. Mọi thứ khác trong file mẫu
+đều đang được comment — chỉ bật khi bạn cần.
+
+Key nằm trong `.env.local` và được tham chiếu trong `openmaic.yml`
+dạng `${VAR}`:
+
+```yaml
+providers:
+  openai:
+    preset: openai
+    apiKey: ${OPENAI_API_KEY}
+    models: [gpt-5.5]
+
+slots:
+  llm: openai:gpt-5.5
+```
+
+Chi tiết về providers, slots, `lock` và `allowUserKeys` xem trong
+`configuration.vi.mdx`.
+
+## Bước 3. Khởi động database
+
+```bash
+pnpm db:up
+```
+
+Lệnh này khởi động PostgreSQL trong Docker. Nếu Docker chưa chạy,
+hãy khởi động Docker trước, rồi chạy lại lệnh trên.
+
+Nếu bạn đã có PostgreSQL riêng, hãy đặt `DATABASE_URL` trong
+`.env.local` theo hướng dẫn trong file `.env.example`, và có thể
+bỏ qua bước này.
+
+## Bước 4. Chạy
+
+```bash
+pnpm dev
+```
+
+Mở trình duyệt và vào địa chỉ mà terminal in ra. Mặc định là
+`http://localhost:3000`, nếu cổng đã bị chiếm thì xem lại log
+để biết cổng thực tế.
+
+Lần đầu mở app, bạn sẽ thấy trang chủ. Hãy thử ngay:
+
+1. Nhập một chủ đề, ví dụ: `Học Python từ đầu`
+2. Hoặc nhập: `Hiểu biến đổi Fourier qua ví dụ trực quan`
+3. Bấm tạo bài học, chờ AI tạo dàn ý và các slide đầu tiên
+4. Vào lớp học, bấm phát để nghe lời giảng
+
+Nếu app báo “cần thiết lập ít nhất một nhà cung cấp model”,
+hãy kiểm tra lại `OPENAI_API_KEY` trong `.env.local` và
+`openmaic.yml` đã lưu chưa, rồi khởi động lại `pnpm dev`.
+
+## Bước 5. Build cho production
+
+Khi muốn chạy bản production ở local:
+
+```bash
+pnpm build
+pnpm start
+```
+
+Muốn triển khai bằng Docker trên máy chủ, xem trong
+`deployment.vi.mdx`.
+
+## Gặp lỗi thường gặp
+
+### `pnpm install` báo lỗi phiên bản Node
+
+Kiểm tra lại `node --version`. OpenMAIC yêu cầu Node.js >= 22.19.
+Nếu máy bạn đang dùng Node cũ, hãy nâng cấp Node rồi xóa thư mục
+`node_modules` và chạy lại `pnpm install`.
+
+### Database không khởi động được
+
+- Kiểm tra Docker đã chạy chưa.
+- Kiểm tra cổng PostgreSQL có bị một PostgreSQL khác chiếm không.
+- Xem log của `pnpm db:up` để biết lỗi cụ thể.
+
+### Tạo bài học báo lỗi model
+
+- Kiểm tra key trong `.env.local` còn hạn và còn tiền không.
+- Kiểm tra tên model trong `openmaic.yml` có đúng với danh sách
+  model được phép của provider đó không.
+- Thử đổi sang model mặc định `openai:gpt-5.5` để loại trừ lỗi
+  do tên model.
+
+### App mở ra vẫn là tiếng Trung hoặc tiếng Anh
+
+Giao diện đã có tiếng Việt (`vi-VN`). Hãy chọn `Tiếng Việt`
+trong menu chọn ngôn ngữ của app. Nếu trình duyệt của bạn gửi
+`Accept-Language: vi`, app sẽ tự khớp sang `vi-VN`.
+
+## Bước tiếp theo
+
+- Cấu hình model, tìm kiếm web, giọng đọc: xem
+  `configuration.vi.mdx`
+- Triển khai Docker, múi giờ, backup: xem `deployment.vi.mdx`
+- Tạo khóa học đầu tiên bằng tiếng Việt: nhập chủ đề bằng
+  tiếng Việt, AI sẽ suy luận ngôn ngữ dạy từ yêu cầu của bạn.
+  Viết rõ “dạy bằng tiếng Việt” trong yêu cầu nếu bạn muốn
+  chắc chắn.

@@ -35,6 +35,13 @@ Infer the course language from all available signals and produce:
 
 6. **Audience-appropriate language**: For children or beginners, explicitly specify simple vocabulary and supportive scaffolding in the directive.
 
+### Vietnamese learners (additive — do not remove the rules above)
+- "Hãy dạy tôi bằng tiếng Việt" / "Tôi muốn học tiếng Anh" → teach in **Vietnamese**.
+- "Tôi muốn học tiếng Trung" → teach in **Vietnamese**, with Chinese as learning material.
+- Advanced learners aiming for immersion (IELTS 7.5+, TOEFL iBT 100+, HSK 6, JLPT N1) → teach in the **target language**.
+- Proxy requests: a Vietnamese parent writing for a child in the Vietnamese curriculum (GDPT 2018) → teach in **Vietnamese**. A Vietnamese teacher designing an English reading lesson → teach in **Vietnamese** with English as learning material.
+- Course-title examples in Vietnamese: "Chuyển động ném xiên thực hành", "Khám phá Hệ Mặt Trời". Keep the existing Chinese/English examples above.
+
 ### Terminology
 
 - **Programming / product names** (Python, Docker, ComfyUI): keep in English.
