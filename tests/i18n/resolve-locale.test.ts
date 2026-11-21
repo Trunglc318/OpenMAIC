@@ -39,7 +39,7 @@ describe('resolveRequestLocale', () => {
   });
 
   it('falls back to defaultLocale', () => {
-    expect(resolveRequestLocale({})).toBe('zh-CN');
-    expect(resolveRequestLocale({ cookie: '', acceptLanguage: 'xx, *' })).toBe('zh-CN');
+    expect(resolveRequestLocale({})).toBe('vi-VN');
+    expect(resolveRequestLocale({ cookie: '', acceptLanguage: 'xx, *' })).toBe('vi-VN');
   });
 });
