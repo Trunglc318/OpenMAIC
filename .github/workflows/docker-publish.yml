@@ -46,4 +46,4 @@ jobs:
           file: ./Dockerfile
           platforms: linux/amd64
           push: true
-          tags: trunglc318/openmaic:latest
+          tags: trung318/openmaic:latest
